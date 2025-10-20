@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Антенный трекер ELRS - Мониторинг в реальном времени</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Partners and Logos Header -->
+        <div class="partners-header">
+            <div class="partners-left">
+                <div class="logo-item">
+                    <img src="./LOGO-04.svg" alt="РГАУ-МСХА">
+                    <span>РГАУ-МСХА</span>
+                </div>
+                <div class="logo-item">
+                    <img src="./Лого-имвхс_clear_glass_png.png" alt="ИМВХС">
+                    <span>ИМВХС</span>
+                </div>
+            </div>
+            
+            <div class="partners-center">
+                <div class="brand-text">
+                    <h2>МИК-1</h2>
+                </div>
+                <div class="logo-item">
+                    <img src="./аспа.png" alt="АСПА">
+                    <span></span>
+                </div>
+            </div>
+            
+            <div class="partners-right">
+                <div class="logo-item">
+                    <img src="./2035.svg" alt="20.35 Университет">
+                    <span>20.35 Университет</span>
+                </div>
+                <div class="logo-item">
+                    <img src="./федпроект.svg" alt="Провайдер проекта">
+                    <span>Федеральный проект</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Header Section -->
+        <header class="header">
+            <div class="header-title">
+                <h1>Антенный трекер ELRS - Мониторинг в реальном времени</h1>
+                <div class="status-bar">
+                    <div class="connection-status" id="connectionStatus">
+                        <div class="status-indicator connected" id="statusIndicator"></div>
+                        <span id="statusText">Подключено</span>
+                    </div>
+                    <div class="mode-indicator" id="modeIndicator">
+                        Режим: <span id="currentMode">СЛЕЖЕНИЕ</span>
+                    </div>
+                </div>
+            </div>
+            <div class="system-info">
+                <div class="info-item">
+                    <span class="label">Время работы:</span>
+                    <span id="uptime">00:00:00</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left Panel: Azimuth Visualization -->
+            <section class="azimuth-section">
+                <div class="azimuth-container">
+                    <h3>Азимут (вид сверху)</h3>
+                    <div class="compass-container">
+                        <canvas id="azimuthCanvas" width="300" height="300"></canvas>
+                        <div class="compass-labels">
+                            <div class="compass-label north">С<br>0°</div>
+                            <div class="compass-label east">В<br>90°</div>
+                            <div class="compass-label south">Ю<br>180°</div>
+                            <div class="compass-label west">З<br>270°</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Elevation Panel -->
+                <div class="elevation-container">
+                    <h3>Элевация</h3>
+                    <div class="elevation-scale">
+                        <canvas id="elevationCanvas" width="80" height="200"></canvas>
+                        <div class="elevation-labels">
+                            <span class="elev-label" style="top: 0%">90°</span>
+                            <span class="elev-label" style="top: 25%">67.5°</span>
+                            <span class="elev-label" style="top: 50%">45°</span>
+                            <span class="elev-label" style="top: 75%">22.5°</span>
+                            <span class="elev-label" style="top: 100%">0°</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Center Panel: RSSI Graph -->
+            <section class="telemetry-section">
+                <div class="rssi-container">
+                    <h3>RSSI Мониторинг</h3>
+                    <div class="chart-container">
+                        <canvas id="rssiChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="rssi-values">
+                        <div class="rssi-item">
+                            <span class="rssi-label rssi1">RSSI1:</span>
+                            <span id="rssi1Value">-65 dBm</span>
+                        </div>
+                        <div class="rssi-item">
+                            <span class="rssi-label rssi2">RSSI2:</span>
+                            <span id="rssi2Value">-67 dBm</span>
+                        </div>
+                        <div class="rssi-item">
+                            <span class="rssi-label lq">Link Quality:</span>
+                            <span id="linkQuality">95%</span>
+                        </div>
+                        <div class="rssi-item">
+                            <span class="rssi-label distance">Расстояние:</span>
+                            <span id="distance">500 м</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: System Data -->
+            <section class="system-section">
+                <div class="angles-container">
+                    <h3>Углы Антенны</h3>
+                    <div class="angle-group">
+                        <div class="angle-item">
+                            <span class="angle-label">Текущий азимут:</span>
+                            <span id="currentAzimuth" class="angle-value">175.0°</span>
+                        </div>
+                        <div class="angle-item">
+                            <span class="angle-label">Целевой азимут:</span>
+                            <span id="targetAzimuth" class="angle-value">180.0°</span>
+                        </div>
+                        <div class="angle-item">
+                            <span class="angle-label">Текущая элевация:</span>
+                            <span id="currentElevation" class="angle-value">43.0°</span>
+                        </div>
+                        <div class="angle-item">
+                            <span class="angle-label">Целевая элевация:</span>
+                            <span id="targetElevation" class="angle-value">45.0°</span>
+                        </div>
+                        <div class="angle-item error">
+                            <span class="angle-label">Погрешность:</span>
+                            <span id="trackingError" class="angle-value">5.0°</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="drone-info">
+                    <h3>Данные Дрона</h3>
+                    <div class="drone-item">
+                        <span class="drone-label">Азимут дрона:</span>
+                        <span id="droneAzimuth">180.0°</span>
+                    </div>
+                    <div class="drone-item">
+                        <span class="drone-label">Элевация дрона:</span>
+                        <span id="droneElevation">45.0°</span>
+                    </div>
+                    <div class="drone-item">
+                        <span class="drone-label">Скорость:</span>
+                        <span id="droneSpeed">15 м/с</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Control Panel -->
+        <footer class="control-panel">
+            <div class="controls-group">
+                <div class="control-buttons">
+                    <button id="startBtn" class="btn btn--primary">СТАРТ</button>
+                    <button id="stopBtn" class="btn btn--secondary">СТОП</button>
+                    <button id="resetBtn" class="btn btn--outline">СБРОС</button>
+                </div>
+                <div class="mode-selector">
+                    <label class="form-label">Режим работы:</label>
+                    <select id="modeSelect" class="form-control">
+                        <option value="auto">Автоматический</option>
+                        <option value="manual">Ручной</option>
+                        <option value="search">Поиск</option>
+                    </select>
+                </div>
+                <div class="manual-controls" id="manualControls" style="display: none;">
+                    <div class="manual-input">
+                        <label for="manualAzimuth">Азимут:</label>
+                        <input type="number" id="manualAzimuth" class="form-control" min="0" max="359" value="180">
+                    </div>
+                    <div class="manual-input">
+                        <label for="manualElevation">Элевация:</label>
+                        <input type="number" id="manualElevation" class="form-control" min="0" max="90" value="45">
+                    </div>
+                    <button id="setAngleBtn" class="btn btn--primary btn--sm">Установить</button>
+                </div>
+            </div>
+        </footer>
+
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

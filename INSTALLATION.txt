@@ -1,0 +1,301 @@
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                 ИНСТРУКЦИЯ ПО УСТАНОВКЕ И ЗАПУСКУ                            ║
+║              Антенный трекер по обратной телеметрии ELRS                     ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════
+1. ПОДГОТОВКА RASPBERRY PI
+═══════════════════════════════════════════════════════════════════════════════
+
+1.1. Установка Raspberry Pi OS (рекомендуется Lite версия)
+    - Скачайте Raspberry Pi Imager
+    - Выберите "Raspberry Pi OS Lite (64-bit)"
+    - Настройте WiFi и SSH в настройках
+    - Запишите образ на SD карту
+
+1.2. Первый запуск и обновление системы
+    $ ssh pi@raspberrypi.local
+    $ sudo apt update
+    $ sudo apt upgrade -y
+    $ sudo apt install python3 python3-pip git -y
+
+1.3. Настройка UART портов
+    $ sudo raspi-config
+
+    Навигация:
+    3 Interface Options
+      → I6 Serial Port
+        → Login shell: NO
+        → Serial hardware: YES
+
+    После этого перезагрузите:
+    $ sudo reboot
+
+═══════════════════════════════════════════════════════════════════════════════
+2. УСТАНОВКА ПРОЕКТА
+═══════════════════════════════════════════════════════════════════════════════
+
+2.1. Создание директории проекта
+    $ mkdir ~/antenna-tracker
+    $ cd ~/antenna-tracker
+
+2.2. Копирование файлов проекта
+    Скопируйте все файлы проекта на Raspberry Pi:
+    - config.py
+    - drone_telemetry_emulator.py
+    - antenna_mechanism_emulator.py
+    - tracker_controller.py
+    - requirements.txt
+    - README.md
+
+    Через SCP:
+    $ scp *.py requirements.txt pi@raspberrypi.local:~/antenna-tracker/
+
+2.3. Установка зависимостей Python
+    $ cd ~/antenna-tracker
+    $ pip3 install -r requirements.txt
+
+    Если возникают проблемы:
+    $ sudo apt install python3-serial python3-numpy -y
+
+═══════════════════════════════════════════════════════════════════════════════
+3. НАСТРОЙКА ПОРТОВ
+═══════════════════════════════════════════════════════════════════════════════
+
+3.1. Проверка доступных UART портов
+    $ ls -l /dev/tty*
+
+    Должны быть видны:
+    - /dev/ttyAMA0 (primary UART)
+    - /dev/ttyAMA1 (secondary UART, требует настройки)
+
+3.2. Активация дополнительных UART (если нужно)
+    $ sudo nano /boot/config.txt
+
+    Добавьте в конец файла:
+    dtoverlay=uart2
+    dtoverlay=uart3
+    dtoverlay=uart4
+    dtoverlay=uart5
+
+    Сохраните (Ctrl+O, Enter, Ctrl+X)
+    $ sudo reboot
+
+3.3. Настройка прав доступа
+    $ sudo usermod -a -G dialout $USER
+    $ sudo chmod 666 /dev/ttyAMA0
+    $ sudo chmod 666 /dev/ttyAMA1
+
+═══════════════════════════════════════════════════════════════════════════════
+4. ТЕСТИРОВАНИЕ В РЕЖИМЕ ЭМУЛЯЦИИ
+═══════════════════════════════════════════════════════════════════════════════
+
+4.1. Редактирование конфигурации
+    $ nano config.py
+
+    Убедитесь что:
+    EMULATION_MODE = True
+
+4.2. Запуск компонентов (в 3 терминалах)
+
+    ТЕРМИНАЛ 1 - Эмулятор телеметрии:
+    $ cd ~/antenna-tracker
+    $ python3 drone_telemetry_emulator.py
+
+    Вывод должен показывать:
+    INFO:__main__:Connected to loop:// at 420000 baud
+    INFO:__main__:Starting telemetry emulator...
+    INFO:__main__:Drone: Az=180.0° El=45.0° RSSI=-50dBm
+
+    ТЕРМИНАЛ 2 - Эмулятор антенны:
+    $ cd ~/antenna-tracker
+    $ python3 antenna_mechanism_emulator.py
+
+    Вывод должен показывать:
+    INFO:__main__:Antenna mechanism connected to loop://
+    INFO:__main__:Starting antenna mechanism emulator...
+    INFO:__main__:Antenna: Az=90.0° El=45.0°
+
+    ТЕРМИНАЛ 3 - Главный контроллер:
+    $ cd ~/antenna-tracker
+    $ python3 tracker_controller.py
+
+    Вывод должен показывать:
+    INFO:__main__:Connected to telemetry: socket://localhost:5000
+    INFO:__main__:Connected to antenna: socket://localhost:5001
+    INFO:__main__:Starting tracker controller...
+    INFO:__main__:Mode: SEARCH | RSSI: -65dBm | Antenna: Az=95.0° El=45.0°
+
+═══════════════════════════════════════════════════════════════════════════════
+5. ПОДКЛЮЧЕНИЕ РЕАЛЬНОГО ОБОРУДОВАНИЯ
+═══════════════════════════════════════════════════════════════════════════════
+
+5.1. Схема подключения ELRS приемника
+
+    ELRS RX Module          Raspberry Pi GPIO
+    ──────────────          ─────────────────
+    GND         ────────→   GND (Pin 6)
+    5V          ────────→   5V  (Pin 2)
+    TX (телеметрия) ───→   GPIO 15 / RXD (Pin 10)
+    RX (управление) ←──    GPIO 14 / TXD (Pin 8)
+
+5.2. Схема подключения механизма антенны (RS485)
+
+    RS485 Module            Raspberry Pi GPIO
+    ────────────            ─────────────────
+    GND         ────────→   GND (Pin 14)
+    VCC         ────────→   5V  (Pin 4)
+    A+ (TX)     ←──────    GPIO 0 / TXD1
+    B- (RX)     ────────→   GPIO 1 / RXD1
+
+5.3. Настройка конфигурации для реального оборудования
+    $ nano config.py
+
+    Измените:
+    EMULATION_MODE = False
+    TELEMETRY_PORT = '/dev/ttyAMA0'
+    ANTENNA_PORT = '/dev/ttyAMA1'
+
+5.4. Настройка ELRS приемника
+    - Подключитесь к ELRS через WiFi или USB
+    - Зайдите в веб-интерфейс ELRS
+    - Настройте:
+      * Serial Protocol: CRSF
+      * Telemetry: Enabled
+      * Telemetry Ratio: 1:2 или 1:4
+      * Baud Rate: 420000
+
+5.5. Запуск с реальным оборудованием
+    $ cd ~/antenna-tracker
+    $ python3 tracker_controller.py
+
+═══════════════════════════════════════════════════════════════════════════════
+6. УСТАНОВКА ВЕБ-ИНТЕРФЕЙСА
+═══════════════════════════════════════════════════════════════════════════════
+
+6.1. Распаковка веб-приложения
+    $ cd ~/antenna-tracker
+    $ mkdir web_visualization
+    $ cd web_visualization
+    $ unzip antenna-tracker-viz.zip
+
+6.2. Запуск веб-сервера
+    $ python3 -m http.server 8080
+
+    Или установите nginx для постоянной работы:
+    $ sudo apt install nginx -y
+    $ sudo cp -r ~/antenna-tracker/web_visualization/* /var/www/html/
+    $ sudo systemctl restart nginx
+
+6.3. Доступ к интерфейсу
+    Откройте браузер:
+    http://<IP-адрес-RPi>:8080
+
+    Или через nginx:
+    http://<IP-адрес-RPi>
+
+═══════════════════════════════════════════════════════════════════════════════
+7. АВТОЗАПУСК ПРИ ЗАГРУЗКЕ
+═══════════════════════════════════════════════════════════════════════════════
+
+7.1. Создание systemd service
+    $ sudo nano /etc/systemd/system/antenna-tracker.service
+
+    Вставьте:
+
+    [Unit]
+    Description=ELRS Antenna Tracker
+    After=network.target
+
+    [Service]
+    Type=simple
+    User=pi
+    WorkingDirectory=/home/pi/antenna-tracker
+    ExecStart=/usr/bin/python3 /home/pi/antenna-tracker/tracker_controller.py
+    Restart=always
+    RestartSec=10
+
+    [Install]
+    WantedBy=multi-user.target
+
+7.2. Активация автозапуска
+    $ sudo systemctl daemon-reload
+    $ sudo systemctl enable antenna-tracker.service
+    $ sudo systemctl start antenna-tracker.service
+
+7.3. Проверка статуса
+    $ sudo systemctl status antenna-tracker.service
+
+═══════════════════════════════════════════════════════════════════════════════
+8. ДИАГНОСТИКА И РЕШЕНИЕ ПРОБЛЕМ
+═══════════════════════════════════════════════════════════════════════════════
+
+Проблема: Нет данных с UART
+Решение:
+    $ sudo dmesg | grep tty
+    $ sudo cat /dev/ttyAMA0  # Должны идти данные
+    Проверьте проводку и скорость передачи
+
+Проблема: Permission denied на /dev/ttyAMA0
+Решение:
+    $ sudo usermod -a -G dialout $USER
+    $ sudo chmod 666 /dev/ttyAMA0
+    Перелогиньтесь
+
+Проблема: Антенна дергается
+Решение:
+    Увеличьте RSSI_FILTER_WINDOW в config.py до 10-15
+    Уменьшите TRACKING_SPEED
+
+Проблема: Система не находит сигнал
+Решение:
+    Проверьте уровень RSSI_THRESHOLD в config.py
+    Убедитесь что дрон передает телеметрию
+    Проверьте частоту и модуляцию ELRS
+
+═══════════════════════════════════════════════════════════════════════════════
+9. ТЕСТИРОВАНИЕ И КАЛИБРОВКА
+═══════════════════════════════════════════════════════════════════════════════
+
+9.1. Тест телеметрии
+    $ python3 -c "import serial; s=serial.Serial('/dev/ttyAMA0',420000); 
+    import time; 
+    while True: 
+        if s.in_waiting: print(s.read(s.in_waiting).hex()); 
+        time.sleep(0.1)"
+
+9.2. Тест механизма антенны
+    Запустите antenna_mechanism_emulator.py и отправьте команду:
+    $ echo -ne '\xFF\x01\x00\x00\x00\x00' > /dev/ttyAMA1
+
+9.3. Калибровка RSSI
+    - Запустите систему
+    - Поместите дрон на известное расстояние
+    - Запишите значения RSSI_MIN и RSSI_MAX
+    - Обновите config.py
+
+═══════════════════════════════════════════════════════════════════════════════
+10. ПОЛЕЗНЫЕ КОМАНДЫ
+═══════════════════════════════════════════════════════════════════════════════
+
+Просмотр логов:
+    $ tail -f ~/antenna-tracker/tracker.log
+    $ journalctl -u antenna-tracker.service -f
+
+Остановка сервиса:
+    $ sudo systemctl stop antenna-tracker.service
+
+Перезапуск:
+    $ sudo systemctl restart antenna-tracker.service
+
+Проверка портов:
+    $ ls -l /dev/tty* | grep AMA
+    $ sudo cat /proc/tty/driver/serial
+
+Мониторинг системы:
+    $ htop
+    $ vcgencmd measure_temp
+    $ vcgencmd get_throttled
+
+═══════════════════════════════════════════════════════════════════════════════
